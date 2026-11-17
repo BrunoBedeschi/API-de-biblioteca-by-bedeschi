@@ -1,0 +1,6 @@
+target/
+.idea/
+*.iml
+.git/
+*.zip
+README.md
