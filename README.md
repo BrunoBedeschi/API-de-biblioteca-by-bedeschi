@@ -1,4 +1,4 @@
-# API de Biblioteca By Bedeschi – Spring Boot (Parte 2)
+# API de Biblioteca By Bedeschi – Spring Boot
 
 API RESTful (Spring Boot 3.5 / Java 17+ / Maven / H2 / Spring Data JPA / Bean Validation / Springdoc OpenAPI / Spring HATEOAS).
 
@@ -23,18 +23,6 @@ mvn spring-boot:run
 | ChaveApi | Many-to-One (opcional) com Usuario; enum `NivelAcesso` |
 | RegistroIdempotencia | guarda respostas de POST já processados |
 
-## Recursos avançados (Parte 2)
-
-### 4.1 Idempotência (`X-Idempotency-Key`)
-- Vale para **POST** (exceto `/api-keys`, para não guardar chaves em texto puro). O cabeçalho é opcional.
-- 1ª requisição: processa e guarda a resposta (somente 2xx) na tabela `registro_idempotencia`.
-- Repetição (mesma chave e mesmo corpo): devolve a resposta original, **sem criar de novo**, com `Idempotency-Replayed: true`.
-- Mesma chave com corpo diferente: **422**. Mesma chave ainda em processamento: **409**.
-- Respostas de erro não são guardadas (dá para corrigir o corpo e reenviar com a mesma chave).
-- A chave é isolada por cliente (chave de API ou IP) e expira em 24 h (`app.idempotency.ttl-hours`).
-
-### 4.2 Autenticação por chave de API (`X-API-Key`)
-Implementada com filtro próprio (sem Spring Security). Só o **hash SHA-256** da chave fica no banco; o valor em texto puro aparece uma única vez, ao gerar/rotacionar.
 
 | Nível | Pode |
 |---|---|
@@ -49,21 +37,6 @@ Sem chave ou chave inválida/revogada: **401**. Nível insuficiente: **403**.
 `admin-key-123456` (ADMIN) · `escrita-key-123456` (ESCRITA) · `leitura-key-123456` (LEITURA)
 
 Gerenciamento (nível ADMIN): `POST /api-keys` (gerar) · `GET /api-keys` · `GET /api-keys/{id}` · `POST /api-keys/{id}/rotacionar` · `DELETE /api-keys/{id}` (revogar).
-
-### 4.3 Rate limiting
-- Por IP, janela fixa: **30 requisições / 60 s** (`app.rate-limit.max-requests` e `app.rate-limit.window-seconds`).
-- Todas as respostas trazem `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset`.
-- Excedeu: **429** com `Retry-After` (segundos).
-- Swagger UI e console H2 não entram na contagem.
-
-### 4.4 CORS
-- Origens permitidas: `http://localhost:3000`, `http://localhost:4200`, `http://localhost:5173` (`app.cors.allowed-origins`).
-- Métodos: `GET, POST, PUT, DELETE, OPTIONS` (`app.cors.allowed-methods`).
-- Cabeçalhos aceitos: `Content-Type, Accept, X-API-Key, X-Idempotency-Key, X-API-Version`; expostos: `Location, Retry-After, X-RateLimit-*, X-API-Version, Idempotency-Replayed`.
-- O preflight (`OPTIONS`) não exige chave de API.
-
-### 4.5 Versionamento (`X-API-Version`)
-O header escolhe o **modo da API inteira**. Sem o header, vale a **v2**; valor diferente de `1` ou `2` retorna **400**. A versão aplicada volta no header de resposta `X-API-Version`.
 
 | | **v1** (`X-API-Version: 1`) | **v2** (padrão) |
 |---|---|---|
@@ -151,17 +124,7 @@ Recursos: `autores`, `categorias`, `livros`, `usuarios`, `carteirinhas`, `api-ke
 ```
 Dados de exemplo são carregados de `data.sql` na inicialização.
 
-## Deploy no Render
-O projeto já traz `Dockerfile`, `render.yaml`, `.dockerignore` e `.gitignore`.
-
-1. Suba a pasta do projeto (com o `Dockerfile` na raiz) para um repositório no GitHub.
-2. No [Render](https://render.com): **New + → Web Service** (ou **Blueprint**, que lê o `render.yaml`) e conecte o repositório.
-3. Se for Web Service manual: **Language = Docker**, **Instance Type = Free**, **Health Check Path = `/v3/api-docs`** e a variável `SPRING_PROFILES_ACTIVE=prod`.
-4. Clique em **Deploy**. Quando terminar, acesse `https://SEU-SERVICO.onrender.com/swagger-ui.html`.
-
 Variáveis de ambiente opcionais: `V1_HABILITADA`, `DADOS_SEPARADOS_POR_VERSAO`, `ADMIN_API_KEY`, `ESCRITA_API_KEY`, `LEITURA_API_KEY`, `CORS_ALLOWED_ORIGINS`, `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_WINDOW_SECONDS`.
-
-Observações do plano gratuito: o serviço "dorme" após ~15 min sem acesso (a primeira chamada seguinte leva cerca de 1 minuto) e, como o H2 é em memória, **os dados voltam ao estado inicial do `data.sql` a cada reinício**. Com `prod` ativo, o console H2 fica desligado.
 
 ## Página inexistente
 Pedir uma página maior que a última (ex.: `/livros?page=257`) retorna **404** com a mensagem "A página 257 não existe...". A página 0 sempre responde 200, mesmo sem registros.
